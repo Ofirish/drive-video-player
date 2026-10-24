@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Drive Video Player</title><link rel="stylesheet" href="style.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script></head><body>
+<header><h1>Drive Videos</h1><button id="signin">Sign in</button></header>
+<form id="ff"><input id="folder" placeholder="Folder URL or ID"><button>Load</button></form>
+<section id="pl" hidden><video id="v" playsinline controls preload="metadata"></video>
+<div class="ctl"><button id="prev">⏮</button><button id="play">⏯</button><button id="stop">⏹</button><button id="next">⏭</button><button id="fs">⛶</button>
+<label><input type="checkbox" id="auto" checked> Auto-next</label></div>
+<div class="ctl"><button id="dl">Download</button><button id="ren">Rename</button><button id="det">Details</button></div>
+<pre id="info" hidden></pre></section>
+<p id="msg"></p><ul id="list"></ul>
+<script src="config.js"></script><script src="app.js"></script></body></html>
