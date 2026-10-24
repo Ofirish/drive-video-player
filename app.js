@@ -4,7 +4,7 @@ const msg=t=>$('msg').textContent=t||'';
 $('folder').value=localStorage.lastFolder||'1BdQ3Xxk1Klryfedm-RL2QHxy0IFEiQfR';
 const fid=s=>(s.match(/folders\/([\w-]+)/)||s.match(/id=([\w-]+)/)||[,s.trim()])[1];
 const fmtSize=b=>b?(b/1048576).toFixed(1)+' MB':'?',dt=d=>new Date(d).toLocaleString();
-function signIn(){return new Promise(res=>{tc=tc||google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/drive',callback:r=>{token=r.access_token;$('signin').textContent='Signed in';res()}});tc.callback=r=>{token=r.access_token;$('signin').textContent='Signed in';res()};tc.requestAccessToken({prompt:token?'':'consent'})})}
+function signIn(){return new Promise(res=>{tc=tc||google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/drive',callback:r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';res()}});tc.callback=r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';res()};tc.requestAccessToken({prompt:token?'':'consent'})})}
 async function api(url,opt={}){if(!token)await signIn();opt.headers={...opt.headers,Authorization:'Bearer '+token};
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
  if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
@@ -19,8 +19,15 @@ function render(){$('list').innerHTML='';files.forEach((f,i)=>{const li=document
 const media=f=>`${API}/${f.id}?alt=media&supportsAllDrives=true`;
 async function play(i){if(i<0||i>=files.length)return;cur=i;render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
  if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null}
- v.onerror=async()=>{v.onerror=null;msg('Direct stream failed, downloading to memory…');try{blobUrl=URL.createObjectURL(await (await api(media(f))).blob());v.src=blobUrl;v.play();msg('')}catch(e){msg('Error: '+e.message)}};
- v.src=media(f)+'&access_token='+encodeURIComponent(token);v.play().catch(()=>{});msg(f.name)}
+ v.onerror=async()=>{v.onerror=null;msg('Stream failed, downloading to memory…');try{blobUrl=URL.createObjectURL(await fetchBlob(f));v.src=blobUrl;v.play().catch(()=>{});msg(f.name)}catch(e){msg('Error: '+e.message)}};
+ if(!token)await signIn();await swReady();postTok();
+ v.src='./stream/'+f.id+'?t='+encodeURIComponent(token);v.play().catch(()=>{});msg(f.name)}
+async function fetchBlob(f){const r=await api(media(f));if(!r.ok)throw Error('HTTP '+r.status);const tot=+r.headers.get('Content-Length')||+f.size||0;const rd=r.body.getReader(),ch=[];let n=0;
+ for(;;){const {done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;msg('Downloading '+(tot?Math.round(n*100/tot)+'%':(n/1048576).toFixed(1)+' MB'))}
+ return new Blob(ch,{type:f.mimeType||'video/mp4'})}
+function postTok(){const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c&&token)c.postMessage({token})}
+async function swReady(){if(!('serviceWorker' in navigator))return;await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller){if(!sessionStorage.swr){sessionStorage.swr=1;location.reload()}await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}))}}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
 v.onended=()=>$('auto').checked&&play(cur+1);
 $('ff').onsubmit=e=>{e.preventDefault();load()};$('signin').onclick=signIn;
 $('play').onclick=()=>v.paused?v.play():v.pause();$('stop').onclick=()=>{v.pause();v.currentTime=0};
