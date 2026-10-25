@@ -1,5 +1,5 @@
 // v4
-const V='v4';let token='';
+const V='v5';let token='';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('message',e=>{if(e.data&&e.data.token)token=e.data.token});

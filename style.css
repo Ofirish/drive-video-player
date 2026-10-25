@@ -89,3 +89,12 @@ dialog .ctl{justify-content:flex-end}
 #list li img{background:#0a0a0a url(assets/no-preview.svg) center/cover no-repeat}
 #hdlg h2,#hdlg .he h2{font-size:1.6em!important;line-height:1.25}
 #hOk{padding:12px 36px!important;min-width:180px}
+
+body.plock{position:fixed;left:0;right:0;overflow:hidden}
+#plbd{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.85)}
+#pl{position:fixed;inset:0;z-index:100;margin:0;overflow-y:auto;overscroll-behavior:contain;padding:56px 10px 16px}
+#pl[hidden],#plbd[hidden]{display:none}
+@media(min-width:900px){#pl{inset:4vh auto auto 50%;transform:translateX(-50%);width:min(960px,92vw);max-height:92vh}}
+#plx{position:absolute;top:6px;right:6px;width:46px;height:46px;padding:8px;border:2px solid #999;border-radius:4px;background:linear-gradient(180deg,#888,#444,#222);box-shadow:0 0 10px rgba(255,85,0,.4);cursor:pointer;z-index:2}
+#plx svg{width:100%;height:100%;fill:#f0f0f0}#plx:hover,#plx:focus-visible{box-shadow:0 0 15px #ff5500,0 0 30px #ff2200}
+li.cur-lit{outline:2px solid #ff5500;box-shadow:0 0 15px red}
