@@ -5,3 +5,4 @@ video{width:100%;max-height:60vh;background:#000;border-radius:8px}ul{list-style
 li{display:flex;gap:10px;padding:8px;border-bottom:1px solid #333;cursor:pointer}li.on{background:#223}
 li img{width:96px;height:54px;object-fit:cover;background:#333;border-radius:4px;flex:none}li small{color:#aaa;display:block}
 pre{white-space:pre-wrap;background:#222;padding:8px;border-radius:8px;font-size:12px}
+.badge{background:#555;color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;margin-left:auto;margin-right:6px}#sort{margin-left:4px}

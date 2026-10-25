@@ -1,8 +1,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Drive Video Player</title><link rel="stylesheet" href="style.css">
 <script src="https://accounts.google.com/gsi/client" async defer></script></head><body>
-<header><h1>Drive Videos</h1><button id="signin">Sign in</button></header>
-<form id="ff"><input id="folder" placeholder="Folder URL or ID"><button>Load</button></form>
+<header><h1>Drive Videos</h1><span id="vo" class="badge" hidden>View only</span><button id="signin">Sign in</button></header>
+<form id="ff"><input id="folder" placeholder="Folder URL or ID"><button>Load</button><select id="sort"><option value="name">Name</option><option value="modifiedTime-d">Modified: newest</option><option value="modifiedTime-a">Modified: oldest</option><option value="createdTime-d">Created: newest</option><option value="createdTime-a">Created: oldest</option><option value="size-d">Size: largest</option><option value="size-a">Size: smallest</option></select></form>
 <section id="pl" hidden><video id="v" playsinline controls preload="metadata"></video>
 <div class="ctl"><button id="prev">⏮</button><button id="play">⏯</button><button id="stop">⏹</button><button id="next">⏭</button><button id="fs">⛶</button>
 <label><input type="checkbox" id="auto" checked> Auto-next</label></div>

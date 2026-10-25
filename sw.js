@@ -6,9 +6,9 @@ self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url),m=u.pathname.match(/\/stream\/([\w-]+)$/);
   if(!m||u.origin!==location.origin)return;
   e.respondWith((async()=>{
-    const h={Authorization:'Bearer '+(u.searchParams.get('t')||token)};
+    const k=u.searchParams.get('k'),t=u.searchParams.get('t')||token,h=k&&!u.searchParams.get('t')?{}:{Authorization:'Bearer '+t};
     const range=e.request.headers.get('Range');if(range)h.Range=range;
-    const r=await fetch('https://www.googleapis.com/drive/v3/files/'+m[1]+'?alt=media&supportsAllDrives=true',{headers:h});
+    const r=await fetch('https://www.googleapis.com/drive/v3/files/'+m[1]+'?alt=media&supportsAllDrives=true'+(h.Authorization?'':'&key='+encodeURIComponent(k)),{headers:h});
     const oh=new Headers();['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified'].forEach(k=>{const v=r.headers.get(k);if(v)oh.set(k,v)});
     if(!oh.has('Accept-Ranges'))oh.set('Accept-Ranges','bytes');
     return new Response(r.body,{status:r.status,statusText:r.statusText,headers:oh});
