@@ -98,3 +98,16 @@ body.plock{position:fixed;left:0;right:0;overflow:hidden}
 #plx{position:absolute;top:6px;right:6px;width:46px;height:46px;padding:8px;border:2px solid #999;border-radius:4px;background:linear-gradient(180deg,#888,#444,#222);box-shadow:0 0 10px rgba(255,85,0,.4);cursor:pointer;z-index:2}
 #plx svg{width:100%;height:100%;fill:#f0f0f0}#plx:hover,#plx:focus-visible{box-shadow:0 0 15px #ff5500,0 0 30px #ff2200}
 li.cur-lit{outline:2px solid #ff5500;box-shadow:0 0 15px red}
+
+.hwrap{position:relative;display:inline-block}
+.hbtn{min-height:44px;min-width:44px;padding:0 12px;background:linear-gradient(180deg,#888,#444,#222);border:2px solid #999;color:#f0f0f0;font-weight:700;cursor:pointer;box-shadow:0 0 10px rgba(255,85,0,.4),inset 0 0 5px rgba(255,255,255,.2)}
+.hbtn:hover,.hbtn:focus-visible{box-shadow:0 0 15px #ff5500,0 0 30px #ff2200}
+.hpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:60;width:min(92vw,360px);max-height:60vh;overflow:auto;background:#1a1a1a;border:2px solid #555;box-shadow:0 0 20px rgba(255,85,0,.45);padding:6px}
+.hpanel ul{list-style:none;margin:0;padding:0}
+.hpanel li{display:flex;gap:4px;margin-bottom:4px;background:#1b1b1b;border-left:4px solid #444}
+.hpanel li:hover{border-left-color:#ff5500}
+.hgo{flex:1;min-height:44px;text-align:left;background:none;border:0;color:#f0f0f0;padding:6px 8px;cursor:pointer;display:flex;flex-direction:column;overflow:hidden}
+.hgo b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hgo small{color:#d0d0d0;font-size:.8em}
+.hx{min-width:44px;min-height:44px;background:none;border:0;color:#ffb000;font-size:1.1em;cursor:pointer}.hx:hover{color:#ff5500}
+.hclr{width:100%;min-height:44px;margin-top:4px;background:#300000;border:2px solid #b30000;color:#f0f0f0;cursor:pointer;font-weight:700}
+.hempty{color:#d0d0d0;margin:10px;text-align:center}

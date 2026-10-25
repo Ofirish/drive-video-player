@@ -3,7 +3,7 @@ let token='',files=[],cur=-1,tc,blobUrl;
 const KEY=typeof API_KEY=='string'&&API_KEY&&API_KEY!='PASTE_API_KEY'?API_KEY:'',viewOnly=()=>!token&&!!KEY;
 function mode(){$('vo').hidden=!viewOnly();$('ren').hidden=viewOnly()}
 const LT=['SUMMONING VIDEOS...','OPENING THE ANCIENT ARCHIVE...','AWAKENING THE DRAGON...'];const msg=t=>{t=t||'';$('msg').textContent=t;const b=/^(Loading|Downloading|Stream failed)/.test(t);if(b&&$('load').hidden)$('ltx').textContent=LT[Math.random()*3|0];$('load').hidden=!b};
-$('folder').value=new URLSearchParams(location.search).get('folder')||'';
+$('folder').value=new URLSearchParams(location.search).get('folder')||localStorage.lastLink||'';
 const parse=s=>{s=(s||'').trim();let m;if(m=s.match(/\/folders\/([\w-]+)/))return{t:'folder',id:m[1]};if(m=s.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/)||s.match(/\/(?:open|uc)\?(?:.*&)?id=([\w-]+)/))return{t:'file',id:m[1]};if(m=s.match(/[?&]id=([\w-]+)/))return{t:'any',id:m[1]};return{t:'any',id:s}},fid=s=>parse(s).id;
 const FF='id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink';
 const fmtSize=b=>b?(b/1048576).toFixed(1)+' MB':'?',dt=d=>new Date(d).toLocaleString();
@@ -13,12 +13,12 @@ async function api(url,opt={}){if(viewOnly()&&(!opt.method||opt.method=='GET')){
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
  if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
 async function load(){const p=parse($('folder').value),id=p.id;if(!id)return msg('Paste a Google Drive folder or video link');msg('Loading…');
- if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();return}}catch(e){if(p.t=='file')return msg('Error: '+e.message)}}
+ if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();saveLink($('folder').value,id,f.name,'video');return}}catch(e){if(p.t=='file')return msg('Error: '+e.message)}}
  files=[];let pt='';
  try{do{const q=new URLSearchParams({q:`'${id}' in parents and mimeType contains 'video/' and trashed=false`,pageSize:1000,orderBy:'name',
   fields:'nextPageToken,files(id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink)',
   supportsAllDrives:true,includeItemsFromAllDrives:true,pageToken:pt});const j=await (await api(API+'?'+q)).json();files.push(...j.files);pt=j.nextPageToken}while(pt);
-  sortFiles();render();msg(files.length+' videos')}catch(e){msg('Error: '+e.message)}}
+  sortFiles();render();msg(files.length+' videos');saveLink($('folder').value,id,null,'folder')}catch(e){msg('Error: '+e.message)}}
 $('sort').value=localStorage.sort||'name';
 function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.sort((a,b)=>k=='name'?a.name.localeCompare(b.name,undefined,{numeric:true}):k=='size'?m*((+a.size||0)-(+b.size||0)):m*(new Date(a[k])-new Date(b[k])))}
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
@@ -86,3 +86,18 @@ function closePl(fromPop){if(!plOpen)return;plOpen=false;try{v.pause()}catch(e){
  if(!fromPop&&history.state&&history.state.pl)history.back()}
 addEventListener('popstate',()=>{if(plOpen)closePl(true)});
 document.addEventListener('keydown',e=>{if(e.key=='Escape'&&plOpen&&!document.fullscreenElement)closePl()});
+
+// ---- last link + history ----
+const hGet=()=>{try{return JSON.parse(localStorage.hist||'[]')}catch(e){return[]}},hSet=h=>{localStorage.hist=JSON.stringify(h.slice(0,15));hRender()};
+async function saveLink(link,id,name,t){link=(link||'').trim();localStorage.lastLink=link;let h=hGet().filter(x=>x.id!=id);const old=hGet().find(x=>x.id==id);
+ h.unshift({id,link,t,name:name||(old&&old.name)||id,d:Date.now()});hSet(h);
+ if(!name){try{const j=await (await api(`${API}/${id}?supportsAllDrives=true&fields=name`)).json();if(j.name){hSet(hGet().map(x=>x.id==id?{...x,name:j.name}:x))}}catch(e){}}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hRender(){const P=$('hpanel');if(!P)return;const h=hGet();P.innerHTML=h.length?'<ul>'+h.map(x=>`<li><button class="hgo" data-id="${esc(x.id)}"><b>${x.t=='video'?'▶':'☠'} ${esc(x.name)}</b><small>${new Date(x.d).toLocaleString()}</small></button><button class="hx" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join('')+'</ul><button class="hclr">Clear history</button>':'<p class="hempty">No history yet</p>'}
+$('hbtn').onclick=e=>{e.stopPropagation();const P=$('hpanel');P.hidden=!P.hidden;$('hbtn').setAttribute('aria-expanded',!P.hidden);if(!P.hidden)hRender()};
+$('hpanel').onclick=e=>{e.stopPropagation();const b=e.target.closest('button');if(!b)return;const id=b.dataset.id;
+ if(b.classList.contains('hgo')){const x=hGet().find(y=>y.id==id);if(x){$('folder').value=x.link;$('hpanel').hidden=true;load()}}
+ else if(b.classList.contains('hx'))hSet(hGet().filter(y=>y.id!=id));
+ else if(b.classList.contains('hclr')){hSet([]);}};
+document.addEventListener('click',()=>{$('hpanel').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key=='Escape')$('hpanel').hidden=true});
