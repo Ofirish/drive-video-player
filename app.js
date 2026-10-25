@@ -1,13 +1,13 @@
 const API='https://www.googleapis.com/drive/v3/files',$=id=>document.getElementById(id),v=$('v');
 let token='',files=[],cur=-1,tc,blobUrl;
 const KEY=typeof API_KEY=='string'&&API_KEY&&API_KEY!='PASTE_API_KEY'?API_KEY:'',viewOnly=()=>!token&&!!KEY;
-function mode(){$('vo').hidden=!viewOnly();$('ren').hidden=viewOnly()}
+function mode(){$('vo').hidden=!viewOnly();$('ren').hidden=true}
 const LT=['SUMMONING VIDEOS...','OPENING THE ANCIENT ARCHIVE...','AWAKENING THE DRAGON...'];const msg=t=>{t=t||'';$('msg').textContent=t;const b=/^(Loading|Downloading|Stream failed)/.test(t);if(b&&$('load').hidden)$('ltx').textContent=LT[Math.random()*3|0];$('load').hidden=!b};
 $('folder').value=new URLSearchParams(location.search).get('folder')||localStorage.lastLink||'';
 const parse=s=>{s=(s||'').trim();let m;if(m=s.match(/\/folders\/([\w-]+)/))return{t:'folder',id:m[1]};if(m=s.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/)||s.match(/\/(?:open|uc)\?(?:.*&)?id=([\w-]+)/))return{t:'file',id:m[1]};if(m=s.match(/[?&]id=([\w-]+)/))return{t:'any',id:m[1]};return{t:'any',id:s}},fid=s=>parse(s).id;
 const FF='id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink';
 const fmtSize=b=>b?(b/1048576).toFixed(1)+' MB':'?',dt=d=>new Date(d).toLocaleString();
-function signIn(){return new Promise(res=>{tc=tc||google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/drive',callback:r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';mode();res()}});tc.callback=r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';mode();res()};tc.requestAccessToken({prompt:token?'':'consent'})})}
+function signIn(){return new Promise(res=>{tc=tc||google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/drive',callback:r=>{token=r.access_token;postTok();mode();res()}});tc.callback=r=>{token=r.access_token;postTok();mode();res()};tc.requestAccessToken({prompt:token?'':'consent'})})}
 async function api(url,opt={}){if(viewOnly()&&(!opt.method||opt.method=='GET')){const r=await fetch(url+(url.includes('?')?'&':'?')+'key='+KEY);if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
  if(!token)await signIn();opt.headers={...opt.headers,Authorization:'Bearer '+token};
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
@@ -24,7 +24,7 @@ function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
 function render(){const g=localStorage.view!='list',L=$('list');L.className=g?'grid':'';$('view').textContent=g?'☰ List':'▦ Grid';L.innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on'+(i===lit?' ign':''):'';
  const t=(f.thumbnailLink||'').replace(/=s\d+$/,g?'=s640':'=s220');
- li.innerHTML=g?`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button>${viewOnly()?'':'<button data-a="ren">Rename</button>'}<button data-a="det">Details</button></span>`:`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
+ li.innerHTML=g?`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button><button data-a="det">Details</button></span>`:`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
  li.querySelector('b').textContent=f.name;li.onclick=e=>{const b=e.target.closest('button');if(!b)return play(i);e.stopPropagation();if(b.classList.contains('more')){li.querySelector('.menu').hidden^=1;return}cur=i;openPl();$(b.dataset.a).click();render()};L.append(li);li.querySelectorAll('img[data-id]').forEach(thumb)})}
 const PH='assets/no-preview.svg';
 function thumbNext(im){const s=+(im.dataset.st||0);im.dataset.st=s+1;const id=im.dataset.id,w=localStorage.view!='list'?'w640':'w320';
@@ -58,8 +58,8 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=4',
 v.onended=()=>$('auto').checked&&play(cur+1);
 $('ff').onsubmit=e=>{e.preventDefault();load()};$('folder').addEventListener('paste',()=>setTimeout(load,0));
 const help=$('help'),hd=$('hdlg');help.onclick=()=>hd.showModal();$('hOk').onclick=()=>{hd.close();localStorage.seenHelp=1};hd.onclose=()=>localStorage.seenHelp=1;if(!localStorage.seenHelp&&hd.showModal)hd.showModal();
-if($('folder').value)load();$('signin').onclick=()=>{if(token)return;const d=$('appr');d.showModal?d.showModal():(confirm('Approval needed from the folder owner for editing. Continue to Google sign-in?')&&signIn())};
-$('apC').onclick=()=>$('appr').close();$('apOk').onclick=()=>{$('appr').close();signIn()};
+if($('folder').value)load();
+
 const ft=s=>{s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=String(s%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+x:m+':'+x};
 let seeking=false;const P=$('prog');const upd=()=>{const d=v.duration||0;$('tc').textContent=ft(v.currentTime);$('td').textContent=ft(d);if(!seeking)P.value=d?v.currentTime/d*1000:0;P.style.setProperty('--p',P.value/10+'%')};
 v.ontimeupdate=v.ondurationchange=upd;P.oninput=()=>{seeking=true;P.style.setProperty('--p',P.value/10+'%');$('tc').textContent=ft(P.value/1000*(v.duration||0))};P.onchange=()=>{if(v.duration)v.currentTime=P.value/1000*v.duration;seeking=false};
