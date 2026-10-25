@@ -47,7 +47,11 @@ button:focus-visible,select:focus-visible{outline:2px solid #ffb000;outline-offs
 #prog::-moz-range-thumb{width:22px;height:22px;border-radius:50%;border:2px solid #000;background:radial-gradient(circle at 35% 30%,#fff,#888 40%,#222 75%);box-shadow:0 0 10px var(--ember)}
 .ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
 .ctl label{display:flex;align-items:center;gap:6px;min-height:44px}.ctl input[type=checkbox]{width:22px;height:22px;accent-color:#ff5500}
-.knob{font-size:20px;padding:6px 12px}
+.knob{padding:6px 12px;color:#f0f0f0;line-height:0;display:inline-flex;align-items:center;justify-content:center}
+.knob svg{width:26px;height:26px;fill:currentColor;filter:drop-shadow(0 1px 1px #000)}
+.knob:hover svg,.knob:focus-visible svg,.knob:active svg{filter:drop-shadow(0 0 4px #ff5500) drop-shadow(0 0 8px #b30000)}
+.knob .i-pause,.knob .i-xfs,#play.playing .i-play,#fs.isfs .i-fs{display:none}
+#play.playing .i-pause,#fs.isfs .i-xfs{display:inline}
 #info{white-space:pre-wrap;word-break:break-all;background:#0a0a0a;border-left:4px solid #ff5500;padding:10px;color:#d0d0d0}
 #msg{color:#ffb000;min-height:1.4em}
 #load{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px}#load[hidden]{display:none}

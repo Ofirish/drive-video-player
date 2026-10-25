@@ -64,6 +64,7 @@ const ft=s=>{s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor(s/60)%60
 let seeking=false;const P=$('prog');const upd=()=>{const d=v.duration||0;$('tc').textContent=ft(v.currentTime);$('td').textContent=ft(d);if(!seeking)P.value=d?v.currentTime/d*1000:0;P.style.setProperty('--p',P.value/10+'%')};
 v.ontimeupdate=v.ondurationchange=upd;P.oninput=()=>{seeking=true;P.style.setProperty('--p',P.value/10+'%');$('tc').textContent=ft(P.value/1000*(v.duration||0))};P.onchange=()=>{if(v.duration)v.currentTime=P.value/1000*v.duration;seeking=false};
 v.onplay=v.onpause=()=>document.body.classList.toggle('playing',!v.paused);v.onclick=()=>v.paused?v.play():v.pause();
+{const pb=$('play'),sync=()=>{const p=!v.paused;pb.classList.toggle('playing',p);pb.setAttribute('aria-label',p?'Pause':'Play')};['play','playing','pause','ended','emptied'].forEach(e=>v.addEventListener(e,sync));const fb=$('fs');document.addEventListener('fullscreenchange',()=>{const f=!!(document.fullscreenElement||document.webkitFullscreenElement);fb.classList.toggle('isfs',f);fb.setAttribute('aria-label',f?'Exit fullscreen':'Fullscreen')});document.addEventListener('webkitfullscreenchange',()=>document.dispatchEvent(new Event('fullscreenchange')))}
 $('play').onclick=()=>v.paused?v.play():v.pause();$('stop').onclick=()=>{v.pause();v.currentTime=0};
 $('prev').onclick=()=>play(cur-1);$('next').onclick=()=>play(cur+1);
 $('fs').onclick=()=>(v.requestFullscreen||v.webkitEnterFullscreen||v.webkitRequestFullscreen).call(v);
