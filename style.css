@@ -102,7 +102,7 @@ li.cur-lit{outline:2px solid #ff5500;box-shadow:0 0 15px red}
 .hwrap{position:relative;display:inline-block}
 .hbtn{min-height:44px;min-width:44px;padding:0 12px;background:linear-gradient(180deg,#888,#444,#222);border:2px solid #999;color:#f0f0f0;font-weight:700;cursor:pointer;box-shadow:0 0 10px rgba(255,85,0,.4),inset 0 0 5px rgba(255,255,255,.2)}
 .hbtn:hover,.hbtn:focus-visible{box-shadow:0 0 15px #ff5500,0 0 30px #ff2200}
-.hpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:60;width:min(92vw,360px);max-height:60vh;overflow:auto;background:#1a1a1a;border:2px solid #555;box-shadow:0 0 20px rgba(255,85,0,.45);padding:6px}
+.hpanel{position:fixed;right:auto;z-index:1000;width:min(calc(100vw - 16px),360px);max-width:calc(100vw - 16px);box-sizing:border-box;max-height:60vh;overflow:auto;background:#1a1a1a;border:2px solid #555;box-shadow:0 0 20px rgba(255,85,0,.45);padding:6px}
 .hpanel ul{list-style:none;margin:0;padding:0}
 .hpanel li{display:flex;gap:4px;margin-bottom:4px;background:#1b1b1b;border-left:4px solid #444}
 .hpanel li:hover{border-left-color:#ff5500}

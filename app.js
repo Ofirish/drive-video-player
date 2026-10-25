@@ -13,7 +13,7 @@ async function api(url,opt={}){if(viewOnly()&&(!opt.method||opt.method=='GET')){
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
  if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
 async function load(){const p=parse($('folder').value),id=p.id;if(!id){setTitle();return msg('Paste a Google Drive folder or video link')}msg('Loading…');
- if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();saveLink($('folder').value,id,f.name,'video');setTitle(f.name);return}}catch(e){if(p.t=='file'){setTitle();return msg('Error: '+e.message)}}}
+ if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){saveLink($('folder').value,id,f.name,'video');files=[f];cur=0;render();try{await play(0)}catch(e){}$('info').hidden=true;$('det').click();setTitle(f.name);return}}catch(e){if(p.t=='file'){setTitle();return msg('Error: '+e.message)}}}
  files=[];let pt='';
  try{do{const q=new URLSearchParams({q:`'${id}' in parents and mimeType contains 'video/' and trashed=false`,pageSize:1000,orderBy:'name',
   fields:'nextPageToken,files(id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink)',
@@ -88,13 +88,13 @@ addEventListener('popstate',()=>{if(plOpen)closePl(true)});
 document.addEventListener('keydown',e=>{if(e.key=='Escape'&&plOpen&&!document.fullscreenElement)closePl()});
 
 // ---- last link + history ----
-const hGet=()=>{try{return JSON.parse(localStorage.hist||'[]')}catch(e){return[]}},hSet=h=>{localStorage.hist=JSON.stringify(h.slice(0,15));hRender()};
-async function saveLink(link,id,name,t){link=(link||'').trim();localStorage.lastLink=link;let h=hGet().filter(x=>x.id!=id);const old=hGet().find(x=>x.id==id);
+const hGet=()=>{try{return JSON.parse(localStorage.hist||'[]')}catch(e){return[]}},hSet=h=>{try{localStorage.hist=JSON.stringify(h.slice(0,15))}catch(e){}hRender()};
+async function saveLink(link,id,name,t){link=(link||'').trim();try{localStorage.lastLink=link}catch(e){}let h=hGet().filter(x=>x.id!=id);const old=hGet().find(x=>x.id==id);
  h.unshift({id,link,t,name:name||(old&&old.name)||id,d:Date.now()});hSet(h);
  if(!name){try{const j=await (await api(`${API}/${id}?supportsAllDrives=true&fields=name`)).json();if(j.name){hSet(hGet().map(x=>x.id==id?{...x,name:j.name}:x));return j.name}}catch(e){}}return name||(old&&old.name)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function hRender(){const P=$('hpanel');if(!P)return;const h=hGet();P.innerHTML=h.length?'<ul>'+h.map(x=>`<li><button class="hgo" data-id="${esc(x.id)}"><b>${x.t=='video'?'▶':'☠'} ${esc(x.name)}</b><small>${new Date(x.d).toLocaleString()}</small></button><button class="hx" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join('')+'</ul><button class="hclr">Clear history</button>':'<p class="hempty">No history yet</p>'}
-$('hbtn').onclick=e=>{e.stopPropagation();const P=$('hpanel');P.hidden=!P.hidden;$('hbtn').setAttribute('aria-expanded',!P.hidden);if(!P.hidden)hRender()};
+$('hbtn').onclick=e=>{e.stopPropagation();const P=$('hpanel');P.hidden=!P.hidden;$('hbtn').setAttribute('aria-expanded',!P.hidden);if(!P.hidden){hRender();const r=$('hbtn').getBoundingClientRect(),W=innerWidth,w=Math.min(360,W-16);P.style.width=w+'px';P.style.left=Math.max(8,Math.min(r.right-w,W-w-8))+'px';P.style.top=(r.bottom+6)+'px';P.style.maxHeight=Math.max(160,innerHeight-r.bottom-20)+'px'}};addEventListener('resize',()=>{$('hpanel').hidden=true});addEventListener('scroll',()=>{const P=$('hpanel');if(!P.hidden){const r=$('hbtn').getBoundingClientRect();P.style.top=(r.bottom+6)+'px'}},{passive:true});
 $('hpanel').onclick=e=>{e.stopPropagation();const b=e.target.closest('button');if(!b)return;const id=b.dataset.id;
  if(b.classList.contains('hgo')){const x=hGet().find(y=>y.id==id);if(x){$('folder').value=x.link;$('hpanel').hidden=true;load()}}
  else if(b.classList.contains('hx'))hSet(hGet().filter(y=>y.id!=id));
