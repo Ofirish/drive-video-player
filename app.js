@@ -25,15 +25,20 @@ function render(){$('list').innerHTML='';files.forEach((f,i)=>{const li=document
 const media=f=>`${API}/${f.id}?alt=media&supportsAllDrives=true`;
 async function play(i){if(i<0||i>=files.length)return;cur=i;render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
  if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null}
- v.onerror=async()=>{v.onerror=null;msg('Stream failed, downloading to memory…');try{blobUrl=URL.createObjectURL(await fetchBlob(f));v.src=blobUrl;v.play().catch(()=>{});msg(f.name)}catch(e){msg('Error: '+e.message)}};
- if(!token&&!KEY)await signIn();await swReady();postTok();
- v.src='./stream/'+f.id+'?'+(token?'t='+encodeURIComponent(token):'k='+encodeURIComponent(KEY));v.play().catch(()=>{});msg(f.name)}
+ let done=false,tm;const fb=async why=>{if(done)return;done=true;clearTimeout(tm);v.onerror=v.onloadedmetadata=null;console.warn('Stream failed:',why);msg('Stream failed ('+why+'), downloading to memory…');try{blobUrl=URL.createObjectURL(await fetchBlob(f));v.src=blobUrl;v.play().catch(()=>{});msg(f.name)}catch(e){msg('Error: '+e.message)}};
+ const ok=()=>{done=true;clearTimeout(tm);v.onerror=v.onloadedmetadata=null;msg(f.name)};
+ const why=async src=>{const c=v.error?('media error '+v.error.code+(v.error.message?': '+v.error.message:'')):'error';if(!src.startsWith('./stream/'))return c;try{const r=await fetch(src,{headers:{Range:'bytes=0-1'}});return c+', HTTP '+r.status+' '+(r.ok?'':(await r.text()).slice(0,120))}catch(e){return c+', '+e.message}};
+ let src;
+ if(KEY&&!token)src=`${API}/${f.id}?alt=media&supportsAllDrives=true&key=${encodeURIComponent(KEY)}`;
+ else{if(!token)await signIn();await swReady();postTok();src='./stream/'+f.id+'?t='+encodeURIComponent(token)+'&s='+(+f.size||0);if(!navigator.serviceWorker||!navigator.serviceWorker.controller)console.warn('No SW controller; stream will likely fail')}
+ v.onloadedmetadata=ok;v.onerror=async()=>fb(await why(src));tm=setTimeout(()=>fb('timeout 15s before metadata'),15000);
+ v.src=src;v.play().catch(()=>{});msg('Loading '+f.name+'…')}
 async function fetchBlob(f){const r=await api(media(f));if(!r.ok)throw Error('HTTP '+r.status);const tot=+r.headers.get('Content-Length')||+f.size||0;const rd=r.body.getReader(),ch=[];let n=0;
  for(;;){const {done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;msg('Downloading '+(tot?Math.round(n*100/tot)+'%':(n/1048576).toFixed(1)+' MB'))}
  return new Blob(ch,{type:f.mimeType||'video/mp4'})}
 function postTok(){const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c&&token)c.postMessage({token})}
 async function swReady(){if(!('serviceWorker' in navigator))return;await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller){if(!sessionStorage.swr){sessionStorage.swr=1;location.reload()}await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}))}}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=3',{scope:'./',updateViaCache:'none'}).then(r=>{r.update();return r}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
 v.onended=()=>$('auto').checked&&play(cur+1);
 $('ff').onsubmit=e=>{e.preventDefault();load()};$('signin').onclick=signIn;
 $('play').onclick=()=>v.paused?v.play():v.pause();$('stop').onclick=()=>{v.pause();v.currentTime=0};
