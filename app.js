@@ -2,7 +2,7 @@ const API='https://www.googleapis.com/drive/v3/files',$=id=>document.getElementB
 let token='',files=[],cur=-1,tc,blobUrl;
 const KEY=typeof API_KEY=='string'&&API_KEY&&API_KEY!='PASTE_API_KEY'?API_KEY:'',viewOnly=()=>!token&&!!KEY;
 function mode(){$('vo').hidden=!viewOnly();$('ren').hidden=viewOnly()}
-const msg=t=>$('msg').textContent=t||'';
+const LT=['SUMMONING VIDEOS...','OPENING THE ANCIENT ARCHIVE...','AWAKENING THE DRAGON...'];const msg=t=>{t=t||'';$('msg').textContent=t;const b=/^(Loading|Downloading|Stream failed)/.test(t);if(b&&$('load').hidden)$('ltx').textContent=LT[Math.random()*3|0];$('load').hidden=!b};
 $('folder').value=new URLSearchParams(location.search).get('folder')||'';
 const parse=s=>{s=(s||'').trim();let m;if(m=s.match(/\/folders\/([\w-]+)/))return{t:'folder',id:m[1]};if(m=s.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/)||s.match(/\/(?:open|uc)\?(?:.*&)?id=([\w-]+)/))return{t:'file',id:m[1]};if(m=s.match(/[?&]id=([\w-]+)/))return{t:'any',id:m[1]};return{t:'any',id:s}},fid=s=>parse(s).id;
 const FF='id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink';
@@ -22,13 +22,13 @@ async function load(){const p=parse($('folder').value),id=p.id;if(!id)return msg
 $('sort').value=localStorage.sort||'name';
 function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.sort((a,b)=>k=='name'?a.name.localeCompare(b.name,undefined,{numeric:true}):k=='size'?m*((+a.size||0)-(+b.size||0)):m*(new Date(a[k])-new Date(b[k])))}
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
-function render(){const g=localStorage.view=='grid',L=$('list');L.className=g?'grid':'';$('view').textContent=g?'☰ List':'▦ Grid';L.innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on':'';
+function render(){const g=localStorage.view!='list',L=$('list');L.className=g?'grid':'';$('view').textContent=g?'☰ List':'▦ Grid';L.innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on'+(i===lit?' ign':''):'';
  const t=(f.thumbnailLink||'').replace(/=s220$/,g?'=s640':'=s220');
  li.innerHTML=g?`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button>${viewOnly()?'':'<button data-a="ren">Rename</button>'}<button data-a="det">Details</button></span>`:`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
  li.querySelector('b').textContent=f.name;li.onclick=e=>{const b=e.target.closest('button');if(!b)return play(i);e.stopPropagation();if(b.classList.contains('more')){li.querySelector('.menu').hidden^=1;return}cur=i;$('pl').hidden=false;$(b.dataset.a).click();render()};L.append(li)})}
-$('view').onclick=()=>{localStorage.view=localStorage.view=='grid'?'list':'grid';render()};
+$('view').onclick=()=>{localStorage.view=localStorage.view!='list'?'list':'grid';render()};
 const media=f=>`${API}/${f.id}?alt=media&supportsAllDrives=true`;
-async function play(i){if(i<0||i>=files.length)return;cur=i;render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
+let lit=-1;async function play(i){if(i<0||i>=files.length)return;cur=i;lit=i;setTimeout(()=>{lit=-1},900);render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
  if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null}
  let done=false,tm;const fb=async why=>{if(done)return;done=true;clearTimeout(tm);v.onerror=v.onloadedmetadata=null;console.warn('Stream failed:',why);msg('Stream failed ('+why+'), downloading to memory…');try{blobUrl=URL.createObjectURL(await fetchBlob(f));v.src=blobUrl;v.play().catch(()=>{});msg(f.name)}catch(e){msg('Error: '+e.message)}};
  const ok=()=>{done=true;clearTimeout(tm);v.onerror=v.onloadedmetadata=null;msg(f.name)};
@@ -62,3 +62,5 @@ $('ren').onclick=async()=>{const f=files[cur];if(!f||viewOnly())return;const n=p
 $('det').onclick=()=>{const f=files[cur];if(!f)return;const m=f.videoMediaMetadata||{};$('info').hidden=!$('info').hidden;
  $('info').textContent=`Name: ${f.name}\nType: ${f.mimeType}\nSize: ${fmtSize(+f.size)}\nCreated: ${dt(f.createdTime)}\nModified: ${dt(f.modifiedTime)}\nResolution: ${m.width||'?'}x${m.height||'?'}\nDuration: ${m.durationMillis?Math.round(m.durationMillis/1000)+'s':'?'}\nID: ${f.id}\n${f.webViewLink||''}`};
 mode();
+
+$('rnd').onclick=()=>{if(!files.length)return msg('Load a vault first');let i=Math.random()*files.length|0;if(files.length>1&&i==cur)i=(i+1)%files.length;play(i)};
