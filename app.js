@@ -3,15 +3,18 @@ let token='',files=[],cur=-1,tc,blobUrl;
 const KEY=typeof API_KEY=='string'&&API_KEY&&API_KEY!='PASTE_API_KEY'?API_KEY:'',viewOnly=()=>!token&&!!KEY;
 function mode(){$('vo').hidden=!viewOnly();$('ren').hidden=viewOnly()}
 const msg=t=>$('msg').textContent=t||'';
-$('folder').value=localStorage.lastFolder||'1BdQ3Xxk1Klryfedm-RL2QHxy0IFEiQfR';
-const fid=s=>(s.match(/folders\/([\w-]+)/)||s.match(/id=([\w-]+)/)||[,s.trim()])[1];
+$('folder').value=new URLSearchParams(location.search).get('folder')||'';
+const parse=s=>{s=(s||'').trim();let m;if(m=s.match(/\/folders\/([\w-]+)/))return{t:'folder',id:m[1]};if(m=s.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/)||s.match(/\/(?:open|uc)\?(?:.*&)?id=([\w-]+)/))return{t:'file',id:m[1]};if(m=s.match(/[?&]id=([\w-]+)/))return{t:'any',id:m[1]};return{t:'any',id:s}},fid=s=>parse(s).id;
+const FF='id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink';
 const fmtSize=b=>b?(b/1048576).toFixed(1)+' MB':'?',dt=d=>new Date(d).toLocaleString();
 function signIn(){return new Promise(res=>{tc=tc||google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:'https://www.googleapis.com/auth/drive',callback:r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';mode();res()}});tc.callback=r=>{token=r.access_token;postTok();$('signin').textContent='Signed in';mode();res()};tc.requestAccessToken({prompt:token?'':'consent'})})}
 async function api(url,opt={}){if(viewOnly()&&(!opt.method||opt.method=='GET')){const r=await fetch(url+(url.includes('?')?'&':'?')+'key='+KEY);if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
  if(!token)await signIn();opt.headers={...opt.headers,Authorization:'Bearer '+token};
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
  if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
-async function load(){const id=fid($('folder').value);localStorage.lastFolder=id;msg('Loading…');files=[];let pt='';
+async function load(){const p=parse($('folder').value),id=p.id;if(!id)return msg('Paste a Google Drive folder or video link');msg('Loading…');
+ if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();return}}catch(e){if(p.t=='file')return msg('Error: '+e.message)}}
+ files=[];let pt='';
  try{do{const q=new URLSearchParams({q:`'${id}' in parents and mimeType contains 'video/' and trashed=false`,pageSize:1000,orderBy:'name',
   fields:'nextPageToken,files(id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink)',
   supportsAllDrives:true,includeItemsFromAllDrives:true,pageToken:pt});const j=await (await api(API+'?'+q)).json();files.push(...j.files);pt=j.nextPageToken}while(pt);
@@ -42,7 +45,14 @@ function postTok(){const c=navigator.serviceWorker&&navigator.serviceWorker.cont
 async function swReady(){if(!('serviceWorker' in navigator))return;await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller){if(!sessionStorage.swr){sessionStorage.swr=1;location.reload()}await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}))}}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=3',{scope:'./',updateViaCache:'none'}).then(r=>{r.update();return r}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
 v.onended=()=>$('auto').checked&&play(cur+1);
-$('ff').onsubmit=e=>{e.preventDefault();load()};$('signin').onclick=signIn;
+$('ff').onsubmit=e=>{e.preventDefault();load()};$('folder').addEventListener('paste',()=>setTimeout(load,0));
+const help=$('help'),hd=$('hdlg');help.onclick=()=>hd.showModal();$('hOk').onclick=()=>{hd.close();localStorage.seenHelp=1};hd.onclose=()=>localStorage.seenHelp=1;if(!localStorage.seenHelp&&hd.showModal)hd.showModal();
+if($('folder').value)load();$('signin').onclick=()=>{if(token)return;const d=$('appr');d.showModal?d.showModal():(confirm('Approval needed from the folder owner for editing. Continue to Google sign-in?')&&signIn())};
+$('apC').onclick=()=>$('appr').close();$('apOk').onclick=()=>{$('appr').close();signIn()};
+const ft=s=>{s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=String(s%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+x:m+':'+x};
+let seeking=false;const P=$('prog');const upd=()=>{const d=v.duration||0;$('tc').textContent=ft(v.currentTime);$('td').textContent=ft(d);if(!seeking)P.value=d?v.currentTime/d*1000:0;P.style.setProperty('--p',P.value/10+'%')};
+v.ontimeupdate=v.ondurationchange=upd;P.oninput=()=>{seeking=true;P.style.setProperty('--p',P.value/10+'%');$('tc').textContent=ft(P.value/1000*(v.duration||0))};P.onchange=()=>{if(v.duration)v.currentTime=P.value/1000*v.duration;seeking=false};
+v.onplay=v.onpause=()=>document.body.classList.toggle('playing',!v.paused);v.onclick=()=>v.paused?v.play():v.pause();
 $('play').onclick=()=>v.paused?v.play():v.pause();$('stop').onclick=()=>{v.pause();v.currentTime=0};
 $('prev').onclick=()=>play(cur-1);$('next').onclick=()=>play(cur+1);
 $('fs').onclick=()=>(v.requestFullscreen||v.webkitEnterFullscreen||v.webkitRequestFullscreen).call(v);
