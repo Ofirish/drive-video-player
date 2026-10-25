@@ -19,9 +19,11 @@ async function load(){const id=fid($('folder').value);localStorage.lastFolder=id
 $('sort').value=localStorage.sort||'name';
 function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.sort((a,b)=>k=='name'?a.name.localeCompare(b.name,undefined,{numeric:true}):k=='size'?m*((+a.size||0)-(+b.size||0)):m*(new Date(a[k])-new Date(b[k])))}
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
-function render(){$('list').innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on':'';
- li.innerHTML=`<img loading="lazy" src="${f.thumbnailLink||''}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
- li.querySelector('b').textContent=f.name;li.onclick=()=>play(i);$('list').append(li)})}
+function render(){const g=localStorage.view=='grid',L=$('list');L.className=g?'grid':'';$('view').textContent=g?'☰ List':'▦ Grid';L.innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on':'';
+ const t=(f.thumbnailLink||'').replace(/=s220$/,g?'=s640':'=s220');
+ li.innerHTML=g?`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button>${viewOnly()?'':'<button data-a="ren">Rename</button>'}<button data-a="det">Details</button></span>`:`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
+ li.querySelector('b').textContent=f.name;li.onclick=e=>{const b=e.target.closest('button');if(!b)return play(i);e.stopPropagation();if(b.classList.contains('more')){li.querySelector('.menu').hidden^=1;return}cur=i;$('pl').hidden=false;$(b.dataset.a).click();render()};L.append(li)})}
+$('view').onclick=()=>{localStorage.view=localStorage.view=='grid'?'list':'grid';render()};
 const media=f=>`${API}/${f.id}?alt=media&supportsAllDrives=true`;
 async function play(i){if(i<0||i>=files.length)return;cur=i;render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
  if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null}
