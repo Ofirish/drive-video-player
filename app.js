@@ -12,13 +12,13 @@ async function api(url,opt={}){if(viewOnly()&&(!opt.method||opt.method=='GET')){
  if(!token)await signIn();opt.headers={...opt.headers,Authorization:'Bearer '+token};
  let r=await fetch(url,opt);if(r.status==401){await signIn();opt.headers.Authorization='Bearer '+token;r=await fetch(url,opt)}
  if(!r.ok)throw Error((await r.text()).slice(0,200));return r}
-async function load(){const p=parse($('folder').value),id=p.id;if(!id)return msg('Paste a Google Drive folder or video link');msg('Loading…');
- if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();saveLink($('folder').value,id,f.name,'video');return}}catch(e){if(p.t=='file')return msg('Error: '+e.message)}}
+async function load(){const p=parse($('folder').value),id=p.id;if(!id){setTitle();return msg('Paste a Google Drive folder or video link')}msg('Loading…');
+ if(p.t!='folder'){try{const r=await api(`${API}/${id}?supportsAllDrives=true&fields=${FF}`);const f=await r.json();if(f.error)throw Error(f.error.message);if(f.mimeType!='application/vnd.google-apps.folder'){files=[f];cur=0;render();await play(0);$('info').hidden=true;$('det').click();saveLink($('folder').value,id,f.name,'video');setTitle(f.name);return}}catch(e){if(p.t=='file'){setTitle();return msg('Error: '+e.message)}}}
  files=[];let pt='';
  try{do{const q=new URLSearchParams({q:`'${id}' in parents and mimeType contains 'video/' and trashed=false`,pageSize:1000,orderBy:'name',
   fields:'nextPageToken,files(id,name,size,mimeType,thumbnailLink,createdTime,modifiedTime,videoMediaMetadata,webViewLink)',
   supportsAllDrives:true,includeItemsFromAllDrives:true,pageToken:pt});const j=await (await api(API+'?'+q)).json();files.push(...j.files);pt=j.nextPageToken}while(pt);
-  sortFiles();render();msg(files.length+' videos');saveLink($('folder').value,id,null,'folder')}catch(e){msg('Error: '+e.message)}}
+  sortFiles();render();msg(files.length+' videos');saveLink($('folder').value,id,null,'folder').then(n=>setTitle(n&&n!=id?n:null))}catch(e){setTitle();msg('Error: '+e.message)}}
 $('sort').value=localStorage.sort||'name';
 function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.sort((a,b)=>k=='name'?a.name.localeCompare(b.name,undefined,{numeric:true}):k=='size'?m*((+a.size||0)-(+b.size||0)):m*(new Date(a[k])-new Date(b[k])))}
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
@@ -91,7 +91,7 @@ document.addEventListener('keydown',e=>{if(e.key=='Escape'&&plOpen&&!document.fu
 const hGet=()=>{try{return JSON.parse(localStorage.hist||'[]')}catch(e){return[]}},hSet=h=>{localStorage.hist=JSON.stringify(h.slice(0,15));hRender()};
 async function saveLink(link,id,name,t){link=(link||'').trim();localStorage.lastLink=link;let h=hGet().filter(x=>x.id!=id);const old=hGet().find(x=>x.id==id);
  h.unshift({id,link,t,name:name||(old&&old.name)||id,d:Date.now()});hSet(h);
- if(!name){try{const j=await (await api(`${API}/${id}?supportsAllDrives=true&fields=name`)).json();if(j.name){hSet(hGet().map(x=>x.id==id?{...x,name:j.name}:x))}}catch(e){}}}
+ if(!name){try{const j=await (await api(`${API}/${id}?supportsAllDrives=true&fields=name`)).json();if(j.name){hSet(hGet().map(x=>x.id==id?{...x,name:j.name}:x));return j.name}}catch(e){}}return name||(old&&old.name)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function hRender(){const P=$('hpanel');if(!P)return;const h=hGet();P.innerHTML=h.length?'<ul>'+h.map(x=>`<li><button class="hgo" data-id="${esc(x.id)}"><b>${x.t=='video'?'▶':'☠'} ${esc(x.name)}</b><small>${new Date(x.d).toLocaleString()}</small></button><button class="hx" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join('')+'</ul><button class="hclr">Clear history</button>':'<p class="hempty">No history yet</p>'}
 $('hbtn').onclick=e=>{e.stopPropagation();const P=$('hpanel');P.hidden=!P.hidden;$('hbtn').setAttribute('aria-expanded',!P.hidden);if(!P.hidden)hRender()};
@@ -101,3 +101,9 @@ $('hpanel').onclick=e=>{e.stopPropagation();const b=e.target.closest('button');i
  else if(b.classList.contains('hclr')){hSet([]);}};
 document.addEventListener('click',()=>{$('hpanel').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key=='Escape')$('hpanel').hidden=true});
+
+// ---- dynamic title ----
+function setTitle(n){const h=document.querySelector('.hero h1'),t=document.querySelector('.hero .tag');if(!h)return;
+ if(n){h.textContent=n;h.title=n;h.classList.add('dyn');h.style.fontSize=n.length>60?'clamp(18px,4.2vw,30px)':n.length>30?'clamp(22px,5.5vw,40px)':'';t.textContent='Dragon Archives · The Video Vault of Doom';document.title=n+' · Dragon Archives'}
+ else{h.textContent='Dragon Archives';h.removeAttribute('title');h.classList.remove('dyn');h.style.fontSize='';t.textContent='The Video Vault of Doom';document.title='Dragon Archives · The Video Vault of Doom'}}
+$('folder').addEventListener('input',()=>{if(!$('folder').value.trim())setTitle()});
