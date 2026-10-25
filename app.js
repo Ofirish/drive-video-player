@@ -23,9 +23,16 @@ $('sort').value=localStorage.sort||'name';
 function sortFiles(){const [k,d]=$('sort').value.split('-'),m=d=='d'?-1:1;files.sort((a,b)=>k=='name'?a.name.localeCompare(b.name,undefined,{numeric:true}):k=='size'?m*((+a.size||0)-(+b.size||0)):m*(new Date(a[k])-new Date(b[k])))}
 $('sort').onchange=()=>{localStorage.sort=$('sort').value;const id=files[cur]&&files[cur].id;sortFiles();cur=files.findIndex(x=>x.id==id);render()};
 function render(){const g=localStorage.view!='list',L=$('list');L.className=g?'grid':'';$('view').textContent=g?'☰ List':'▦ Grid';L.innerHTML='';files.forEach((f,i)=>{const li=document.createElement('li');li.className=i==cur?'on'+(i===lit?' ign':''):'';
- const t=(f.thumbnailLink||'').replace(/=s220$/,g?'=s640':'=s220');
- li.innerHTML=g?`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button>${viewOnly()?'':'<button data-a="ren">Rename</button>'}<button data-a="det">Details</button></span>`:`<img loading="lazy" src="${t}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
- li.querySelector('b').textContent=f.name;li.onclick=e=>{const b=e.target.closest('button');if(!b)return play(i);e.stopPropagation();if(b.classList.contains('more')){li.querySelector('.menu').hidden^=1;return}cur=i;$('pl').hidden=false;$(b.dataset.a).click();render()};L.append(li)})}
+ const t=(f.thumbnailLink||'').replace(/=s\d+$/,g?'=s640':'=s220');
+ li.innerHTML=g?`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><b></b><small>${fmtSize(+f.size)} · ${dt(f.createdTime)}</small><button class="more">⋯</button><span class="menu" hidden><button data-a="dl">Download</button>${viewOnly()?'':'<button data-a="ren">Rename</button>'}<button data-a="det">Details</button></span>`:`<img loading="lazy" data-src="${t}" data-id="${f.id}" referrerpolicy="no-referrer" alt=""><div><b></b><small>${fmtSize(+f.size)} · created ${dt(f.createdTime)}</small><small>modified ${dt(f.modifiedTime)}</small></div>`;
+ li.querySelector('b').textContent=f.name;li.onclick=e=>{const b=e.target.closest('button');if(!b)return play(i);e.stopPropagation();if(b.classList.contains('more')){li.querySelector('.menu').hidden^=1;return}cur=i;$('pl').hidden=false;$(b.dataset.a).click();render()};L.append(li);li.querySelectorAll('img[data-id]').forEach(thumb)})}
+const PH='assets/no-preview.svg';
+function thumbNext(im){const s=+(im.dataset.st||0);im.dataset.st=s+1;const id=im.dataset.id,w=localStorage.view!='list'?'w640':'w320';
+ if(s==0&&im.dataset.src){im.src=im.dataset.src;return}
+ if(s<=1){im.dataset.st=2;im.src='https://drive.google.com/thumbnail?id='+encodeURIComponent(id)+'&sz='+w;return}
+ im.onerror=null;im.src=PH;im.classList.add('noprev')}
+const tio='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){tio.unobserve(e.target);thumbNext(e.target)}}),{rootMargin:'400px'}):null;
+function thumb(im){im.onerror=()=>thumbNext(im);im.onload=()=>{if(im.naturalWidth<8&&!im.classList.contains('noprev'))thumbNext(im)};if(tio)tio.observe(im);else thumbNext(im)}
 $('view').onclick=()=>{localStorage.view=localStorage.view!='list'?'list':'grid';render()};
 const media=f=>`${API}/${f.id}?alt=media&supportsAllDrives=true`;
 let lit=-1;async function play(i){if(i<0||i>=files.length)return;cur=i;lit=i;setTimeout(()=>{lit=-1},900);render();$('pl').hidden=false;$('info').hidden=true;const f=files[i];
@@ -34,16 +41,20 @@ let lit=-1;async function play(i){if(i<0||i>=files.length)return;cur=i;lit=i;set
  const ok=()=>{done=true;clearTimeout(tm);v.onerror=v.onloadedmetadata=null;msg(f.name)};
  const why=async src=>{const c=v.error?('media error '+v.error.code+(v.error.message?': '+v.error.message:'')):'error';if(!src.startsWith('./stream/'))return c;try{const r=await fetch(src,{headers:{Range:'bytes=0-1'}});return c+', HTTP '+r.status+' '+(r.ok?'':(await r.text()).slice(0,120))}catch(e){return c+', '+e.message}};
  let src;
- if(KEY&&!token)src=`${API}/${f.id}?alt=media&supportsAllDrives=true&key=${encodeURIComponent(KEY)}`;
+ const vo=KEY&&!token;if(vo){src=`${API}/${f.id}?alt=media&supportsAllDrives=true&key=${encodeURIComponent(KEY)}`}
  else{if(!token)await signIn();await swReady();postTok();src='./stream/'+f.id+'?t='+encodeURIComponent(token)+'&s='+(+f.size||0);if(!navigator.serviceWorker||!navigator.serviceWorker.controller)console.warn('No SW controller; stream will likely fail')}
- v.onloadedmetadata=ok;v.onerror=async()=>fb(await why(src));tm=setTimeout(()=>fb('timeout 15s before metadata'),15000);
+ let tried=0;const voFail=async w=>{if(done)return;clearTimeout(tm);
+  if(!tried&&navigator.serviceWorker&&navigator.serviceWorker.controller){tried=1;console.warn('Direct view-only stream failed:',w);src='./stream/'+f.id+'?k='+encodeURIComponent(KEY)+'&s='+(+f.size||0);tm=setTimeout(()=>voFail('timeout 15s via proxy'),15000);v.src=src;v.play().catch(()=>{});msg('Retrying '+f.name+' via proxy…');return}
+  done=true;v.onerror=v.onloadedmetadata=null;let d=w;try{const r=await fetch(`${API}/${f.id}?alt=media&supportsAllDrives=true&key=${encodeURIComponent(KEY)}`,{headers:{Range:'bytes=0-1'}});d+=', HTTP '+r.status;if(!r.ok){const t=await r.text();d+=': '+((t.match(/"message":\s*"([^"]+)/)||[])[1]||t.slice(0,140))}}catch(e){d+=', '+e.message}
+  if(v.error&&v.error.code==4&&!/HTTP [45]/.test(d))d+=' (this browser may not support the video format)';msg('Cannot play in view-only mode: '+d)};
+ v.onloadedmetadata=ok;v.onerror=async()=>vo?voFail(await why(src)):fb(await why(src));tm=setTimeout(()=>vo?voFail('timeout 15s before metadata'):fb('timeout 15s before metadata'),15000);
  v.src=src;v.play().catch(()=>{});msg('Loading '+f.name+'…')}
 async function fetchBlob(f){const r=await api(media(f));if(!r.ok)throw Error('HTTP '+r.status);const tot=+r.headers.get('Content-Length')||+f.size||0;const rd=r.body.getReader(),ch=[];let n=0;
  for(;;){const {done,value}=await rd.read();if(done)break;ch.push(value);n+=value.length;msg('Downloading '+(tot?Math.round(n*100/tot)+'%':(n/1048576).toFixed(1)+' MB'))}
  return new Blob(ch,{type:f.mimeType||'video/mp4'})}
 function postTok(){const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c&&token)c.postMessage({token})}
 async function swReady(){if(!('serviceWorker' in navigator))return;await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller){if(!sessionStorage.swr){sessionStorage.swr=1;location.reload()}await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}))}}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=3',{scope:'./',updateViaCache:'none'}).then(r=>{r.update();return r}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=4',{scope:'./',updateViaCache:'none'}).then(r=>{r.update();return r}).then(()=>swReady()).catch(e=>console.warn(e));navigator.serviceWorker.addEventListener('controllerchange',postTok)}
 v.onended=()=>$('auto').checked&&play(cur+1);
 $('ff').onsubmit=e=>{e.preventDefault();load()};$('folder').addEventListener('paste',()=>setTimeout(load,0));
 const help=$('help'),hd=$('hdlg');help.onclick=()=>hd.showModal();$('hOk').onclick=()=>{hd.close();localStorage.seenHelp=1};hd.onclose=()=>localStorage.seenHelp=1;if(!localStorage.seenHelp&&hd.showModal)hd.showModal();

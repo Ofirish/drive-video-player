@@ -1,5 +1,5 @@
-// v3
-const V='v3';let token='';
+// v4
+const V='v4';let token='';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('message',e=>{if(e.data&&e.data.token)token=e.data.token});
@@ -9,11 +9,11 @@ self.addEventListener('fetch',e=>{
   e.respondWith((async()=>{
     try{
       const k=u.searchParams.get('k'),t=u.searchParams.get('t')||token,size=+u.searchParams.get('s')||0;
-      const h={};if(t)h.Authorization='Bearer '+t;
+      const h={};const rf=self.registration.scope;if(t)h.Authorization='Bearer '+t;
       const range=e.request.headers.get('Range');if(range)h.Range=range;
       const url='https://www.googleapis.com/drive/v3/files/'+m[1]+'?alt=media&supportsAllDrives=true'+(t?'':'&key='+encodeURIComponent(k||''));
-      const r=await fetch(new Request(url,{headers:h,mode:'cors',credentials:'omit',redirect:'follow',cache:'no-store'}));
-      if(!r.ok){console.warn('[sw '+V+'] Drive',r.status,r.statusText);return new Response('Drive HTTP '+r.status,{status:r.status,statusText:r.statusText})}
+      const r=await fetch(new Request(url,{headers:h,mode:'cors',credentials:'omit',redirect:'follow',cache:'no-store',referrer:rf,referrerPolicy:'strict-origin-when-cross-origin'}));
+      if(!r.ok){console.warn('[sw '+V+'] Drive',r.status,r.statusText);const tx=await r.text().catch(()=>'');return new Response('Drive HTTP '+r.status+' '+tx.slice(0,200),{status:r.status,statusText:r.statusText})}
       const oh=new Headers();['Content-Type','Content-Length','Content-Range','ETag','Last-Modified'].forEach(n=>{const v=r.headers.get(n);if(v)oh.set(n,v)});
       oh.set('Accept-Ranges','bytes');
       if(!oh.get('Content-Type')||oh.get('Content-Type')=='application/octet-stream')oh.set('Content-Type','video/mp4');

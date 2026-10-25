@@ -78,3 +78,10 @@ dialog p,.how{color:#d0d0d0;font-size:15px;margin:0 0 12px}.how{padding-inline-s
 dialog .ctl{justify-content:flex-end}
 @media(min-width:700px){#folder{flex:1 1 300px}.hero .hd{width:70px;height:105px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#embers{display:none}}
+/* readability + thumbs (AA) */
+#list li b{font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000}.grid li b{font-size:15px}
+#list li small{font-size:14px!important;color:#e8e8e8!important;font-weight:600}
+.badge{font-size:15px!important;padding:6px 14px!important;color:#ffc940!important;background:#1a0d00;border-color:#ffc940!important;font-weight:700;letter-spacing:1px}
+#list li img{background:#0a0a0a url(assets/no-preview.svg) center/cover no-repeat}
+#hdlg h2,#hdlg .he h2{font-size:1.6em!important;line-height:1.25}
+#hOk{padding:12px 36px!important;min-width:180px}
